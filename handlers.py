@@ -2,7 +2,7 @@ import os
 import asyncio
 import uuid
 from aiogram import Router, F
-from aiogram.types import Message
+from aiogram.types import Message, FSInputFile
 from aiogram.filters import CommandStart
 
 router = Router()
@@ -10,12 +10,13 @@ router = Router()
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     await message.answer(
-        "⭕️ Привет! Я <b>КРУЖОК</b> — превращаю видео в кружочки!\n\n"
+        "⭕️ Привет! Я КРУЖОК — превращаю видео в кружочки!\n\n"
         "Просто отправь мне видео 🎥 и получи готовый кружочек за секунды ✨\n\n"
-        "⚠️ <b>Ограничения:</b>\n"
+        "⚠️ Ограничения:\n"
         "• Длина: до 60 секунд\n"
-        "• Размер: до 50 МБ",
-        parse_mode="HTML"
+        "• Размер: до 50 МБ\n\n"
+        "Сделано с любовью\n"
+        "Лиза Требухова @fruit_vomit"
     )
 
 @router.message(F.video | F.document)
@@ -56,10 +57,8 @@ async def handle_video(message: Message):
         await proc.wait()
         if proc.returncode != 0:
             raise RuntimeError("Ошибка FFmpeg")
-        from aiogram.types import FSInputFile
-video = FSInputFile(output_path)
-await message.answer_video_note(video)
-
+        video = FSInputFile(output_path)
+        await message.answer_video_note(video)
         await status_msg.delete()
     except Exception as e:
         await status_msg.edit_text(f"❌ Ошибка: {e}")
