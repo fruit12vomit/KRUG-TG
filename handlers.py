@@ -56,8 +56,10 @@ async def handle_video(message: Message):
         await proc.wait()
         if proc.returncode != 0:
             raise RuntimeError("Ошибка FFmpeg")
-        with open(output_path, "rb") as video_file:
-            await message.answer_video_note(video_file)
+        from aiogram.types import FSInputFile
+video = FSInputFile(output_path)
+await message.answer_video_note(video)
+
         await status_msg.delete()
     except Exception as e:
         await status_msg.edit_text(f"❌ Ошибка: {e}")
