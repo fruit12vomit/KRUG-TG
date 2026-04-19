@@ -33,7 +33,10 @@ async def handle_video(message: Message):
             await status_msg.edit_text("❌ Это не видеофайл!")
             return
     if file.file_size and file.file_size > 50 * 1024 * 1024:
-        await status_msg.edit_text("❌ Файл слишком большой (макс. 50 МБ).")
+        await status_msg.edit_text(
+            "❌ Видео слишком большое (больше 50 МБ)\n\n"
+            "Отправь его не файлом, а как обычное видео — просто выбери из галереи и отправь 📲"
+        )
         return
     uid = str(uuid.uuid4())[:8]
     input_path = f"/tmp/input_{uid}.mp4"
@@ -60,6 +63,7 @@ async def handle_video(message: Message):
         video = FSInputFile(output_path)
         await message.answer_video_note(video)
         await status_msg.delete()
+        await message.answer("Готово ✔️ твой кружок выше 👆🏿\nВозвращайся 🖤")
     except Exception as e:
         await status_msg.edit_text(f"❌ Ошибка: {e}")
     finally:
