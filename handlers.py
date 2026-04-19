@@ -3,7 +3,7 @@ import asyncio
 import uuid
 from aiogram import Router, F
 from aiogram.types import Message, FSInputFile
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
 
 router = Router()
 
@@ -17,6 +17,16 @@ async def cmd_start(message: Message):
         "• Размер: до 50 МБ\n\n"
         "Сделано с любовью\n"
         "Лиза Требухова @fruit_vomit"
+    )
+
+@router.message(Command("help"))
+async def cmd_help(message: Message):
+    await message.answer(
+        "❗ Как использовать кружок\n\n"
+        "1. Нажми «Переслать» на кружке\n"
+        "2. Выбери свой чат или канал\n"
+        "3. Включи «Скрыть отправителя»\n\n"
+        "Готово — будет выглядеть как будто ты записал его сам 👌"
     )
 
 @router.message(F.video | F.document)
