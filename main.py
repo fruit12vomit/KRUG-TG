@@ -12,7 +12,8 @@ async def main():
     dp = Dispatcher()
     dp.include_router(router)
     await bot.set_my_commands([
-        BotCommand(command="start", description="⭕️ Запустить КРУЖОК")
+        BotCommand(command="start", description="⭕️ Запустить КРУЖОК"),
+        BotCommand(command="help", description="❓ Помощь")
     ])
     print("⭕️ КРУЖОК запущен!")
     await dp.start_polling(bot)
