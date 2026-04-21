@@ -123,15 +123,9 @@ async def handle_video(message: Message):
         )
         await proc2.wait()
 
-        # Отправляем видео с маской для скачивания
         final_path = output_path if proc2.returncode == 0 and os.path.exists(output_path) else square_path
-        video_file = FSInputFile(final_path)
-        await message.answer_video(video_file)
-
-        # Отправляем настоящий кружок
-        video_note = FSInputFile(square_path)
-        await message.answer_video_note(video_note)
-
+        video = FSInputFile(final_path)
+        await message.answer_video_note(video)
         await status_msg.delete()
         stats["circles"] += 1
         save_stats(stats)
