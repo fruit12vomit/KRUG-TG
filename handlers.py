@@ -90,7 +90,7 @@ async def handle_video(message: Message):
         await status_msg.edit_text("✨ Почти готово...")
         cmd = [
             "ffmpeg", "-y", "-i", input_path,
-            "-vf", "crop=min(iw\\,ih):min(iw\\,ih),scale=1280:1280",
+            "-vf", "crop=min(iw\\,ih):min(iw\\,ih),scale=640:640",
             "-c:v", "libx264", "-preset", "fast", "-crf", "28",
             "-c:a", "aac", "-b:a", "64k",
             "-movflags", "+faststart", "-t", "60", output_path
