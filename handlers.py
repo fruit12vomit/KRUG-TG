@@ -90,7 +90,6 @@ async def handle_video(message: Message):
         await message.bot.download_file(tg_file.file_path, input_path)
         await status_msg.edit_text("✨ Почти готово...")
 
-        # Шаг 1: квадрат 640x640
         cmd1 = [
             "ffmpeg", "-y", "-i", input_path,
             "-vf", "crop=min(iw\\,ih):min(iw\\,ih),scale=640:640",
@@ -105,11 +104,10 @@ async def handle_video(message: Message):
         )
         await proc1.wait()
 
-        # Шаг 2: круглая маска с чёрным фоном
         cmd2 = [
             "ffmpeg", "-y",
             "-i", square_path,
-            "-f", "lavfi", "-i", "color=black:s=640x640:r=30",
+            "-f", "lavfi", "-i", "color=white:s=640x640:r=30",
             "-filter_complex",
             "[0:v]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lte(pow(X-320\\,2)+pow(Y-320\\,2)\\,pow(318\\,2))\\,255\\,0)'[fg];[1:v][fg]overlay=format=auto",
             "-c:v", "libx264", "-preset", "fast", "-crf", "28",
