@@ -83,28 +83,59 @@ async def handle_video(message: Message):
         return
     uid = str(uuid.uuid4())[:8]
     input_path = f"/tmp/input_{uid}.mp4"
+    circle_path = f"/tmp/circle_{uid}.mp4"
     output_path = f"/tmp/output_{uid}.mp4"
     try:
         tg_file = await message.bot.get_file(file.file_id)
         await message.bot.download_file(tg_file.file_path, input_path)
         await status_msg.edit_text("✨ Почти готово...")
-        cmd = [
+
+        # Шаг 1: обрезаем до квадрата 640x640
+        cmd1 = [
             "ffmpeg", "-y", "-i", input_path,
             "-vf", "crop=min(iw\\,ih):min(iw\\,ih),scale=640:640",
             "-c:v", "libx264", "-preset", "fast", "-crf", "28",
             "-c:a", "aac", "-b:a", "64k",
-            "-movflags", "+faststart", "-t", "60", output_path
+            "-movflags", "+faststart", "-t", "60", circle_path
         ]
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
+        proc1 = await asyncio.create_subprocess_exec(
+            *cmd1,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL
         )
-        await proc.wait()
-        if proc.returncode != 0:
-            raise RuntimeError("Ошибка FFmpeg")
-        video = FSInputFile(output_path)
-        await message.answer_video_note(video)
+        await proc1.wait()
+
+        # Шаг 2: накладываем круглую маску с чёрным фоном
+        cmd2 = [
+            "ffmpeg", "-y", "-i", circle_path,
+            "-vf",
+            "format=yuva420p,"
+            "geq=lum='p(X,Y)':a='if(gt(pow(X-320\\,2)+pow(Y-320\\,2)\\,pow(320\\,2))\\,0\\,255)',"
+            "split[fg][mask];"
+            "[mask]alphaextract[alpha];"
+            "color=black:640x640[bg];"
+            "[bg][fg]overlay,format=yuv420p",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "28",
+            "-c:a", "aac", "-b:a", "64k",
+            "-movflags", "+faststart", output_path
+        ]
+        proc2 = await asyncio.create_subprocess_exec(
+            *cmd2,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL
+        )
+        await proc2.wait()
+
+        if proc2.returncode != 0:
+            # если маска не сработала — отправляем просто квадрат
+            output_path = circle_path
+
+        video_note = FSInputFile(circle_path)
+        await message.answer_video_note(video_note)
+
+        video_file = FSInputFile(output_path)
+        await message.answer_document(video_file, caption="⭕️ Твой кружок для скачивания")
+
         await status_msg.delete()
         stats["circles"] += 1
         save_stats(stats)
@@ -112,7 +143,7 @@ async def handle_video(message: Message):
     except Exception as e:
         await status_msg.edit_text(f"❌ Ошибка: {e}")
     finally:
-        for path in [input_path, output_path]:
+        for path in [input_path, circle_path, output_path]:
             if os.path.exists(path):
                 os.remove(path)
 
