@@ -1,14 +1,32 @@
 import os
 import asyncio
 import uuid
+import json
 from aiogram import Router, F
 from aiogram.types import Message, FSInputFile
 from aiogram.filters import CommandStart, Command
 
 router = Router()
 
+STATS_FILE = "/tmp/stats.json"
+ADMIN_ID = 170998607
+
+def load_stats():
+    if os.path.exists(STATS_FILE):
+        with open(STATS_FILE, "r") as f:
+            return json.load(f)
+    return {"users": [], "circles": 0}
+
+def save_stats(stats):
+    with open(STATS_FILE, "w") as f:
+        json.dump(stats, f)
+
 @router.message(CommandStart())
 async def cmd_start(message: Message):
+    stats = load_stats()
+    if message.from_user.id not in stats["users"]:
+        stats["users"].append(message.from_user.id)
+        save_stats(stats)
     await message.answer(
         "⭕️ Привет! Я КРУЖОК — превращаю видео в кружочки!\n\n"
         "Просто отправь мне видео 🎥 и получи готовый кружочек за секунды ✨\n\n"
@@ -29,8 +47,23 @@ async def cmd_help(message: Message):
         "Готово — будет выглядеть как будто ты записал его сам 👌"
     )
 
+@router.message(Command("stats"))
+async def cmd_stats(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⭕️ Отправь мне видео, и я сделаю кружочек!")
+        return
+    stats = load_stats()
+    await message.answer(
+        f"📊 Статистика КРУЖОК\n\n"
+        f"👤 Пользователей: {len(stats['users'])}\n"
+        f"⭕️ Кружков сделано: {stats['circles']}"
+    )
+
 @router.message(F.video | F.document)
 async def handle_video(message: Message):
+    stats = load_stats()
+    if message.from_user.id not in stats["users"]:
+        stats["users"].append(message.from_user.id)
     status_msg = await message.answer("⭕️ Делаю кружочек...")
     if message.video:
         file = message.video
@@ -73,6 +106,8 @@ async def handle_video(message: Message):
         video = FSInputFile(output_path)
         await message.answer_video_note(video)
         await status_msg.delete()
+        stats["circles"] += 1
+        save_stats(stats)
         await message.answer("Готово ✔️ твой кружок выше 👆🏿\nВозвращайся 🖤")
     except Exception as e:
         await status_msg.edit_text(f"❌ Ошибка: {e}")
