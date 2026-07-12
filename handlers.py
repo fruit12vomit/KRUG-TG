@@ -2,6 +2,7 @@ import os
 import asyncio
 import uuid
 import json
+import aiohttp
 from aiogram import Router, F
 from aiogram.types import Message, FSInputFile
 from aiogram.filters import CommandStart, Command
@@ -21,6 +22,19 @@ def save_stats(stats):
     with open(STATS_FILE, "w") as f:
         json.dump(stats, f)
 
+async def download_large_file(bot, file_id, dest_path):
+    file = await bot.get_file(file_id)
+    token = bot.token
+    url = f"https://api.telegram.org/file/bot{token}/{file.file_path}"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            with open(dest_path, "wb") as f:
+                while True:
+                    chunk = await resp.content.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     stats = load_stats()
@@ -31,8 +45,8 @@ async def cmd_start(message: Message):
         "⭕️ Привет! Я КРУЖОК — превращаю видео в кружочки!\n\n"
         "Просто отправь мне видео 🎥 и получи готовый кружочек за секунды ✨\n\n"
         "⚠️ Ограничения:\n"
-        "• Длина: до 60 секунд\n"
-        "• Размер: до 50 МБ\n\n"
+        "• Длина: до 2 минут\n"
+        "• Размер: до 300 МБ\n\n"
         "Сделано с любовью\n"
         "Лиза Требухова @fruit_vomit"
     )
@@ -67,17 +81,17 @@ async def handle_video(message: Message):
     status_msg = await message.answer("⭕️ Делаю кружочек...")
     if message.video:
         file = message.video
-        if file.duration and file.duration > 60:
-            await status_msg.edit_text("❌ Видео длиннее 60 секунд!")
+        if file.duration and file.duration > 120:
+            await status_msg.edit_text("❌ Видео длиннее 2 минут!")
             return
     else:
         file = message.document
         if not file.mime_type or not file.mime_type.startswith("video"):
             await status_msg.edit_text("❌ Это не видеофайл!")
             return
-    if file.file_size and file.file_size > 50 * 1024 * 1024:
+    if file.file_size and file.file_size > 300 * 1024 * 1024:
         await status_msg.edit_text(
-            "❌ Видео слишком большое (больше 50 МБ)\n\n"
+            "❌ Видео слишком большое (больше 300 МБ)\n\n"
             "Отправь его не файлом, а как обычное видео — просто выбери из галереи и отправь 📲"
         )
         return
@@ -86,8 +100,7 @@ async def handle_video(message: Message):
     square_path = f"/tmp/square_{uid}.mp4"
     output_path = f"/tmp/output_{uid}.mp4"
     try:
-        tg_file = await message.bot.get_file(file.file_id)
-        await message.bot.download_file(tg_file.file_path, input_path)
+        await download_large_file(message.bot, file.file_id, input_path)
         await status_msg.edit_text("✨ Почти готово...")
 
         cmd1 = [
@@ -95,7 +108,7 @@ async def handle_video(message: Message):
             "-vf", "crop=min(iw\\,ih):min(iw\\,ih),scale=640:640",
             "-c:v", "libx264", "-preset", "fast", "-crf", "28",
             "-c:a", "aac", "-b:a", "64k",
-            "-movflags", "+faststart", "-t", "60", square_path
+            "-movflags", "+faststart", "-t", "120", square_path
         ]
         proc1 = await asyncio.create_subprocess_exec(
             *cmd1,
@@ -112,7 +125,7 @@ async def handle_video(message: Message):
             "[0:v]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lte(pow(X-320\\,2)+pow(Y-320\\,2)\\,pow(318\\,2))\\,255\\,0)'[fg];[1:v][fg]overlay=format=auto",
             "-c:v", "libx264", "-preset", "fast", "-crf", "28",
             "-c:a", "aac", "-b:a", "64k",
-            "-movflags", "+faststart", "-t", "60", output_path
+            "-movflags", "+faststart", "-t", "120", output_path
         ]
         proc2 = await asyncio.create_subprocess_exec(
             *cmd2,
