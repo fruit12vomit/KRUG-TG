@@ -45,8 +45,8 @@ async def cmd_start(message: Message):
         "⭕️ Привет! Я КРУЖОК — превращаю видео в кружочки!\n\n"
         "Просто отправь мне видео 🎥 и получи готовый кружочек за секунды ✨\n\n"
         "⚠️ Ограничения:\n"
-        "• Длина: до 2 минут\n"
-        "• Размер: до 300 МБ\n\n"
+        "• Длина: до 60 секунд\n"
+        "• Размер: до 20 МБ\n\n"
         "Сделано с любовью\n"
         "Лиза Требухова @fruit_vomit"
     )
@@ -81,18 +81,20 @@ async def handle_video(message: Message):
     status_msg = await message.answer("⭕️ Делаю кружочек...")
     if message.video:
         file = message.video
-        if file.duration and file.duration > 120:
-            await status_msg.edit_text("❌ Видео длиннее 2 минут!")
+        if file.duration and file.duration > 60:
+            await status_msg.edit_text("❌ Видео длиннее 60 секунд!")
             return
     else:
         file = message.document
         if not file.mime_type or not file.mime_type.startswith("video"):
             await status_msg.edit_text("❌ Это не видеофайл!")
             return
-    if file.file_size and file.file_size > 300 * 1024 * 1024:
+    if file.file_size and file.file_size > 20 * 1024 * 1024:
         await status_msg.edit_text(
-            "❌ Видео слишком большое (больше 300 МБ)\n\n"
-            "Отправь его не файлом, а как обычное видео — просто выбери из галереи и отправь 📲"
+            "❌ Видео слишком большое (больше 20 МБ)\n\n"
+            "Как уменьшить размер:\n"
+            "• Обрежь видео до 15-20 секунд\n"
+            "• Отправь не файлом, а как обычное видео из галереи 📲"
         )
         return
     uid = str(uuid.uuid4())[:8]
@@ -108,7 +110,7 @@ async def handle_video(message: Message):
             "-vf", "crop=min(iw\\,ih):min(iw\\,ih),scale=640:640",
             "-c:v", "libx264", "-preset", "fast", "-crf", "28",
             "-c:a", "aac", "-b:a", "64k",
-            "-movflags", "+faststart", "-t", "120", square_path
+            "-movflags", "+faststart", "-t", "60", square_path
         ]
         proc1 = await asyncio.create_subprocess_exec(
             *cmd1,
@@ -125,7 +127,7 @@ async def handle_video(message: Message):
             "[0:v]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lte(pow(X-320\\,2)+pow(Y-320\\,2)\\,pow(318\\,2))\\,255\\,0)'[fg];[1:v][fg]overlay=format=auto",
             "-c:v", "libx264", "-preset", "fast", "-crf", "28",
             "-c:a", "aac", "-b:a", "64k",
-            "-movflags", "+faststart", "-t", "120", output_path
+            "-movflags", "+faststart", "-t", "60", output_path
         ]
         proc2 = await asyncio.create_subprocess_exec(
             *cmd2,
