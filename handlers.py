@@ -48,7 +48,7 @@ async def cmd_start(message: Message):
         "• Длина: до 60 секунд\n"
         "• Размер: до 20 МБ\n\n"
         "Сделано с любовью\n"
-        "Лиза Требухова @fruit_vomit"
+        "Лиза Требухова @upala_vstala"
     )
 
 @router.message(Command("help"))
