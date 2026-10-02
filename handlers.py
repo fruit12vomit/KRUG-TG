@@ -140,6 +140,10 @@ async def handle_video(message: Message):
         video = FSInputFile(final_path)
         await message.answer_video_note(video)
         await status_msg.delete()
+        try:
+            await message.delete()
+        except Exception:
+            pass
         stats["circles"] += 1
         save_stats(stats)
         await message.answer("Готово ✔️ твой кружок выше 👆🏿\nВозвращайся 🖤")
